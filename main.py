@@ -3,10 +3,8 @@ import email
 import base64
 import quopri
 
-from typing import Dict
 
-
-def get_body_text(payload):
+def get_body_text(payload, email_encoding):
 
     body = None
     _type = payload.get_content_type()
@@ -45,40 +43,15 @@ def get_body_text(payload):
     return _type, body
 
 
-def get_credencial(credential):
+def get_messages(service_name, email_address, access_token, port, query):
 
-    _id, _secret = ""
+    search_term = query  # "SINCE 9-Dec-2018 SEEN"
 
-    if "basic" in credential.keys():
-        try:
-            _id = credential["basic"]["email_address"]
-            _secret = credential["basic"]["password"]
-        except Exception as e:
-            print(e)
+    with imaplib.IMAP4_SSL(host=service_name, port=port) as mail:
 
-    elif "oauth2" in credential.keys():
-        try:
-            _id = credential["oauth2"]["email_address"]
-            _secret = credential["oauth2"]["access_token"]
-        except Exception as e:
-            print(e)
-
-    return _id, _secret
-
-
-search_term = "SINCE 9-Dec-2018 SEEN"
-
-
-def get_messages(service_name="", credential: Dict):
-
-    get_credencial(credential)
-
-    with imaplib.IMAP4_SSL(host="imap.gmail.com", port=993) as mail:
-
-        if method is "basic" or method is not None:
+        auth_string = 'user=%s\1auth=Bearer %s\1\1' % (email_address, access_token)
 
         mail.authenticate('XOAUTH2', lambda x: auth_string)
-
         mail.select(mailbox='INBOX', readonly=False)
 
         typ, mails = mail.search(None, search_term)
@@ -96,9 +69,9 @@ def get_messages(service_name="", credential: Dict):
 
             if is_multipart:
                 for payload in raw_mail.get_payload():
-                    _type, _body = get_body_text(payload)
+                    _type, _body = get_body_text(payload, email_encoding)
 
             else:
-                _type, _body = get_body_text(raw_mail)
+                _type, _body = get_body_text(raw_mail, email_encoding)
 
             print(_body)
